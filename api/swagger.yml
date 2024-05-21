@@ -1,0 +1,118 @@
+swagger: "2.0"
+info:
+  title: ANTI-BRUTEFORCE
+  version: 0.0.1
+  description: Final project
+basePath: /api/v1
+ 
+paths:
+  /auth:
+    get:
+      operationId: authCheck
+      summary: Attempted authorizations
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema: 
+            required:
+            - login
+            - password
+            - ip
+            type: object
+            properties:
+              login:
+                type: string
+              password:
+                type: string
+              ip:
+                type: string
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Did passed
+          schema: 
+            type: object
+            properties:
+              passed: 
+                type: boolean
+        500:
+          description: Didn't passed 
+          schema: 
+            type: object
+            properties:
+              passed:
+                type: boolean
+              error:
+                type: string
+  /blacklist:
+    put:
+      operationId: blacklistPut
+      summary: Request to add IP in blacklist
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema: 
+            required:
+            - ip
+            type: object
+            properties:
+              ip:
+                type: string
+      responses:
+        200:
+          description: The IP has been successfully added to blacklist
+          schema:
+            $ref: '#/definitions/status_200'
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/error_500'
+    delete:
+      operationId: blacklistDelete
+      summary: Request to delete IP from blacklist
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema: 
+            required:
+            - ip
+            type: object
+            properties:
+              ip:
+                type: string
+      responses:
+        200:
+          description: The IP has been successfully deleted from blacklist
+          schema:
+            $ref: '#/definitions/status_200'
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/error_500'
+definitions:
+  status_200:
+    type: object
+    properties:
+      status:  
+        type: string
+  error_500:
+    type: object
+    properties:
+      error:  
+        type: string
+
+  

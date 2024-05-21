@@ -1,0 +1,10 @@
+# BLACKLIST
+GET http://[::]:8000/api/v1/auth
+Content-Type: application/json
+
+{
+    "ip": "23",
+    "login": "login1",
+    "password": "user1"
+}
+
