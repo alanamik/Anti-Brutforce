@@ -3,28 +3,18 @@ package main
 import (
 	"OTUS_hws/Anti-BruteForce/internal/antibrutforce"
 	"OTUS_hws/Anti-BruteForce/internal/config"
-	"OTUS_hws/Anti-BruteForce/internal/gen/restapi"
-	"OTUS_hws/Anti-BruteForce/internal/gen/restapi/operations"
-	"OTUS_hws/Anti-BruteForce/internal/handlers"
-	"OTUS_hws/Anti-BruteForce/internal/redisdb"
-	"flag"
+	server "OTUS_hws/Anti-BruteForce/internal/server/http"
+	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	"github.com/go-openapi/loads"
 	"github.com/pkg/errors"
 )
 
-var configFile string
-
-func init() {
-	flag.StringVar(&configFile, "config", "/configs/dev.yaml", "Path to configuration file")
-}
-
 func main() {
-	flag.Parse()
-
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
@@ -34,38 +24,37 @@ func main() {
 		panic(err)
 	}
 
-	swaggerSpec, err := loads.Analyzed(restapi.SwaggerJSON, "")
+	abfChecker, err := antibrutforce.New(conf)
 	if err != nil {
-		err = errors.Wrap(err, "[loads.Analyzed()]")
 		panic(err)
 	}
+	server := server.New(abfChecker, conf)
+	ctx := context.Background()
 
-	redisClient := redisdb.NewClient(*conf)
-	abfChecker := antibrutforce.New(redisClient, conf)
-	h := handlers.NewHandler(abfChecker)
+	// TODO: change time of ticker
+	interval := time.Duration(30) * time.Second
+	tk := time.NewTicker(interval)
+	tickerChan := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-tickerChan:
+				return
+			case tm := <-tk.C:
+				fmt.Println(tm)
+				abfChecker.ClearOldLoginBuckets()
+			}
+		}
+	}()
 
-	api := operations.NewAntiBrutForceAPI(swaggerSpec)
-	h.Register(api)
-	server := restapi.NewServer(api)
-	server.Port = conf.Service.Port
-	server.Host = conf.Service.Host
+	go func() {
+		if err := server.Start(ctx); err != nil {
+			os.Exit(1)
+		}
+	}()
+	<-quit
 
-	if err = server.Serve(); err != nil {
-		err = errors.Wrap(err, "[server.Serve()]")
-		panic(err)
-	}
-
-	sig := <-quit
-
-	err = redisClient.Client.Close()
-	if err != nil {
-		err = errors.Wrapf(err, "[db.Close(%v)]", sig)
-		panic(err)
-	}
-
-	err = server.Shutdown()
-	if err != nil {
-		err = errors.Wrap(err, "[server.Shutdown()]")
-		panic(err)
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	server.Stop(ctx)
 }

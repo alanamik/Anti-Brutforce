@@ -10,8 +10,8 @@ import (
 
 type Config struct {
 	Service    Service    `yaml:"service"`
-	Redis      Redis      `yaml:"redis"`
 	Parameters Parameters `yaml:"parameters"`
+	IPs        ListIPs    `yaml:"listIPs"`
 }
 
 func New() (*Config, error) {
@@ -31,7 +31,7 @@ func New() (*Config, error) {
 
 func readFile() ([]byte, error) {
 	var configPath string
-	flag.StringVar(&configPath, "config_path", "./configs/dev.yml", "path to configuration file")
+	flag.StringVar(&configPath, "config", "./configs/dev.yml", "path to configuration file")
 	flag.Parse()
 
 	b, err := os.ReadFile(configPath)

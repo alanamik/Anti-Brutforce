@@ -1,18 +1,16 @@
 package antibrutforce
 
 import (
-	"context"
+	"OTUS_hws/Anti-BruteForce/internal/config"
+	"net"
 	"os"
 	"testing"
-
-	"OTUS_hws/Anti-BruteForce/internal/config"
-	"OTUS_hws/Anti-BruteForce/internal/redisdb"
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
-func TestRedis(t *testing.T) {
+func TestListFunctions(t *testing.T) {
 	os.Chdir("..")
 	os.Chdir("..")
 	conf, err := config.New()
@@ -20,60 +18,41 @@ func TestRedis(t *testing.T) {
 		err = errors.Wrap(err, "[config.New()]")
 		panic(err)
 	}
-
-	ctx := context.Background()
-	redisClient := redisdb.NewClient(*conf)
-	//	redisClient.Client.FlushDB(ctx)
+	abf, _ := New(conf)
 
 	// check adding to lists
-	inputBlockedIPs := []string{"126.10.10.11/10", "120.1.5.7/10", "128.10.10.11/10"}
+	inputBlockedIPs := []string{"145.92.137.88/20", "162.198.0.44/20", "162.198.0.157/27"}
 	for _, ip := range inputBlockedIPs {
-		err = redisClient.AddToList(ctx, ip, redisdb.Blacklist)
+		err = abf.AddToList(ip, false)
 		require.NoError(t, err)
 	}
 
-	inputPassedIPs := []string{"56.10.10.11/10", "45.12.50.7/10", "125.1.14.10/10"}
+	inputPassedIPs := []string{"12.34.56.78/24", "192.168.0.101/24", "10.8.248.131/23"}
 	for _, ip := range inputPassedIPs {
-		err = redisClient.AddToList(ctx, ip, redisdb.Whitelist)
+		err = abf.AddToList(ip, true)
 		require.NoError(t, err)
 	}
-
-	blockedIPs, err := redisClient.GetAllIPFromList(ctx, redisdb.Blacklist)
-	require.NoError(t, err)
-	for i, j := 0, len(blockedIPs)-1; i < j; i, j = i+1, j-1 {
-		blockedIPs[i], blockedIPs[j] = blockedIPs[j], blockedIPs[i]
-	}
-	require.Equal(t, inputBlockedIPs, blockedIPs)
-
-	passedIPs, err := redisClient.GetAllIPFromList(ctx, redisdb.Whitelist)
-	require.NoError(t, err)
-	for i, j := 0, len(passedIPs)-1; i < j; i, j = i+1, j-1 {
-		passedIPs[i], passedIPs[j] = passedIPs[j], passedIPs[i]
-	}
-
-	require.EqualValues(t, inputPassedIPs, passedIPs)
-
 	// check adding IP, that is in a list
-	err = redisClient.AddToList(ctx, inputBlockedIPs[2], redisdb.Blacklist)
-	require.ErrorIs(t, redisdb.ErrIPInListYet, err)
+	err = abf.AddToList(inputBlockedIPs[2], false)
+	require.ErrorIs(t, err, ErrIPInListYet)
 
-	err = redisClient.AddToList(ctx, inputPassedIPs[2], redisdb.Whitelist)
-	require.ErrorIs(t, redisdb.ErrIPInListYet, err)
-
-	// check adding IP in a non-existent list
-	err = redisClient.AddToList(ctx, "testIP", "nonExistentList")
-	require.ErrorIs(t, redisdb.ErrListDoesNotExist, err)
+	err = abf.AddToList(inputPassedIPs[2], true)
+	require.ErrorIs(t, err, ErrIPInListYet)
 
 	// check deleting from lists
-	err = redisClient.DeleteFromList(ctx, inputBlockedIPs[2], redisdb.Blacklist)
+	err = abf.DeleteFromList(inputBlockedIPs[1])
 	require.NoError(t, err)
-	isInList, err := redisClient.CheckInList(ctx, inputBlockedIPs[2], redisdb.Blacklist)
-	require.NoError(t, err)
-	require.Equal(t, false, isInList)
 
-	err = redisClient.DeleteFromList(ctx, inputPassedIPs[2], redisdb.Whitelist)
+	_, isFound, _ := abf.CheckIPInList(net.ParseIP(inputBlockedIPs[2]))
+	require.Equal(t, false, isFound)
+
+	err = abf.DeleteFromList("78.34.201.90/21")
+	require.ErrorIs(t, err, ErrNoSuchIP)
+
+	// check another ips that not in the list
+	ip := net.ParseIP("192.67.45.3")
+	pass, found, err := abf.CheckIPInList(ip)
 	require.NoError(t, err)
-	isInList, err = redisClient.CheckInList(ctx, inputPassedIPs[2], redisdb.Whitelist)
-	require.NoError(t, err)
-	require.Equal(t, false, isInList)
+	require.Equal(t, false, pass)
+	require.Equal(t, false, found)
 }

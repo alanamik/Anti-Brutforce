@@ -1,5 +1,5 @@
 BIN := "./antibrutforce"
-DOCKER_IMG="--"
+DOCKER_IMG="antibrutforce:latest"
 GEN_DIR=internal/gen
 
 swagger-gen:
@@ -14,10 +14,16 @@ swagger-gen:
 	git add $(GEN_DIR)
 
 run: build
-	$(BIN) -config ./configs/dev.yml
+	$(BIN) -config ./configs/dev.yml 
 
 build:
 	go build -v -o $(BIN) ./cmd/cmd.go
 
-run-redis:
+docker-compose-run:
 	docker compose up -d
+
+docker-build:
+	docker build -t $(DOCKER_IMG) .
+
+docker-run:
+	docker run $(DOCKER_IMG)

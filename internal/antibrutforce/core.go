@@ -2,20 +2,29 @@ package antibrutforce
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
+	"os"
 	"time"
 
 	"OTUS_hws/Anti-BruteForce/internal/config"
-	"OTUS_hws/Anti-BruteForce/internal/redisdb"
+
+	"gopkg.in/yaml.v2"
 )
 
-const BucketRangeTime time.Duration = time.Minute * 1
+const (
+	BucketRangeTime  time.Duration = time.Minute * 1
+	BucketLivingTime time.Duration = time.Second * 10
+)
 
-const BucketLivingTime time.Duration = time.Minute * 10
+var (
+	ErrNoSuchLogin = errors.New("no such login")
+	ErrNoSuchIP    = errors.New("no such IP")
+	ErrIPInListYet = errors.New("IP in the list yet")
+)
 
 type AntiBrutForce struct {
-	RedisServer *redisdb.RedisClient
-
 	LimitIP       int
 	LimitLogin    int
 	LimitPassword int
@@ -23,6 +32,8 @@ type AntiBrutForce struct {
 	ClientsLogins    map[string]Bucket
 	ClientsPasswords map[string]Bucket
 	ClientsIPs       map[string]Bucket
+
+	CertainedIps map[string]IPNet // true - whitelist, false - blacklist
 }
 
 type Bucket struct {
@@ -30,41 +41,74 @@ type Bucket struct {
 	Timer              time.Time // время первого запроса после обнуления количества попыток
 }
 
-func New(r *redisdb.RedisClient, conf *config.Config) *AntiBrutForce {
+type IPNetIn struct {
+	Cidr   string `json:"cidr"`
+	Passed bool   `json:"passed"`
+}
+
+type IPNet struct {
+	Cidr   string
+	Mask   *net.IPNet
+	Passed bool
+}
+
+func New(conf *config.Config) (*AntiBrutForce, error) {
 	abf := &AntiBrutForce{
-		RedisServer:   r,
 		LimitIP:       conf.Parameters.LimitIP,
 		LimitLogin:    conf.Parameters.LimitLogin,
 		LimitPassword: conf.Parameters.LimitPassword,
 	}
 	abf.ClientsLogins = make(map[string]Bucket, 0)
-	fmt.Println(abf)
-	return abf
+	abf.ClientsPasswords = make(map[string]Bucket, 0)
+	abf.ClientsIPs = make(map[string]Bucket, 0)
+
+	abf.CertainedIps = make(map[string]IPNet, 0)
+	err := abf.LoadCertainedIps(conf.IPs.Path)
+	if err != nil {
+		return nil, err
+	}
+	return abf, nil
+}
+
+func (abf *AntiBrutForce) LoadCertainedIps(filePath string) error {
+	b, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+	out := make([]IPNetIn, 0)
+	err = yaml.Unmarshal(b, &out)
+	if err != nil {
+		return err
+	}
+
+	for _, addr := range out {
+		abf.AddToList(addr.Cidr, addr.Passed)
+	}
+
+	return nil
 }
 
 func (abf *AntiBrutForce) CheckRequest(ctx context.Context, ip string, login string, password string) (bool, error) {
 	// проверяем сначала IP, если есть в листах, то прерываем проверку
-	isInList, err := abf.checkInBlackList(ctx, ip)
+	addr := net.ParseIP(ip)
+	val, isFound, err := abf.CheckIPInList(addr)
 	if err != nil {
 		return false, err
 	}
-	if isInList {
-		fmt.Println("BLACK LIST")
-		return false, nil
+	if isFound {
+		return val, nil
 	}
-
-	isInList, err = abf.checkInWhiteList(ctx, ip)
-	if err != nil {
+	passed, err := abf.CheckIP(ip)
+	if err != nil || !passed {
 		return false, err
 	}
-	if isInList {
-
-		fmt.Println("WHITE LIST")
-		return true, nil
+	passed, err = abf.CheckLogin(login)
+	if err != nil || !passed {
+		return false, err
 	}
 
-	passed, err := abf.CheckLogin(login)
-	if err != nil {
+	passed, err = abf.CheckPassword(password)
+	if err != nil || !passed {
 		return false, err
 	}
 
@@ -72,9 +116,8 @@ func (abf *AntiBrutForce) CheckRequest(ctx context.Context, ip string, login str
 }
 
 func (abf *AntiBrutForce) CheckLogin(login string) (bool, error) {
-	// no in the map
 	if _, ok := abf.ClientsLogins[login]; !ok {
-		fmt.Println("NO IN MAP")
+		fmt.Println("NO L IN MAP")
 		client := Bucket{
 			RequestsPerMinutes: 1,
 			Timer:              time.Now(),
@@ -86,7 +129,7 @@ func (abf *AntiBrutForce) CheckLogin(login string) (bool, error) {
 	client := abf.ClientsLogins[login]
 	// Если с времени первого запроса после обнуления прошло больше минуты, то обнуляем время для клиента
 	if time.Since(client.Timer) > BucketRangeTime {
-		fmt.Println("ZERO")
+		fmt.Println("L ZERO")
 		client.Timer = time.Now()
 		client.RequestsPerMinutes = 1
 		abf.ClientsLogins[login] = client
@@ -94,43 +137,151 @@ func (abf *AntiBrutForce) CheckLogin(login string) (bool, error) {
 	}
 	// Если с времени первого запроса не прошло больше минуты И лимит попыток не превышен, то пропускаем
 	if (time.Since(client.Timer) < BucketRangeTime) && client.RequestsPerMinutes <= abf.LimitLogin {
-		fmt.Println("PASSED - ", client.RequestsPerMinutes)
+		fmt.Println("L PASSED - ", client.RequestsPerMinutes)
 		client.RequestsPerMinutes++
 		abf.ClientsLogins[login] = client
 		return true, nil
 	}
 
-	fmt.Println("END")
+	fmt.Println("L END")
 	return false, nil
 }
 
-func (abf *AntiBrutForce) CheckPassword(password string) {
-}
-
-func (abf *AntiBrutForce) checkInBlackList(ctx context.Context, ip string) (bool, error) {
-	isInList, err := abf.RedisServer.CheckInList(ctx, ip, redisdb.Blacklist)
-	if err != nil {
-		return false, err
+func (abf *AntiBrutForce) CheckPassword(password string) (bool, error) {
+	if _, ok := abf.ClientsPasswords[password]; !ok {
+		fmt.Println("NO P IN MAP")
+		client := Bucket{
+			RequestsPerMinutes: 1,
+			Timer:              time.Now(),
+		}
+		abf.ClientsIPs[password] = client
+		return true, nil
+	}
+	// in the map
+	client := abf.ClientsPasswords[password]
+	// Если с времени первого запроса после обнуления прошло больше минуты, то обнуляем время для клиента
+	if time.Since(client.Timer) > BucketRangeTime {
+		fmt.Println("ZERO P")
+		client.Timer = time.Now()
+		client.RequestsPerMinutes = 1
+		abf.ClientsPasswords[password] = client
+		return true, nil
+	}
+	// Если с времени первого запроса не прошло больше минуты И лимит попыток не превышен, то пропускаем
+	if (time.Since(client.Timer) < BucketRangeTime) && client.RequestsPerMinutes <= abf.LimitPassword {
+		fmt.Println("PASSED P- ", client.RequestsPerMinutes)
+		client.RequestsPerMinutes++
+		abf.ClientsPasswords[password] = client
+		return true, nil
 	}
 
-	return isInList, nil
+	fmt.Println("P END")
+	return false, nil
 }
 
-func (abf *AntiBrutForce) checkInWhiteList(ctx context.Context, ip string) (bool, error) {
-	isInList, err := abf.RedisServer.CheckInList(ctx, ip, redisdb.Whitelist)
-	if err != nil {
-		return false, err
+func (abf *AntiBrutForce) CheckIP(ip string) (bool, error) {
+	if _, ok := abf.ClientsIPs[ip]; !ok {
+		fmt.Println("NO IP IN MAP")
+		client := Bucket{
+			RequestsPerMinutes: 1,
+			Timer:              time.Now(),
+		}
+		abf.ClientsIPs[ip] = client
+		return true, nil
+	}
+	// in the map
+	client := abf.ClientsIPs[ip]
+	// Если с времени первого запроса после обнуления прошло больше минуты, то обнуляем время для клиента
+	if time.Since(client.Timer) > BucketRangeTime {
+		fmt.Println("ZERO IP")
+		client.Timer = time.Now()
+		client.RequestsPerMinutes = 1
+		abf.ClientsIPs[ip] = client
+		return true, nil
+	}
+	// Если с времени первого запроса не прошло больше минуты И лимит попыток не превышен, то пропускаем
+	if (time.Since(client.Timer) < BucketRangeTime) && client.RequestsPerMinutes <= abf.LimitIP {
+		fmt.Println("PASSED IP- ", client.RequestsPerMinutes)
+		client.RequestsPerMinutes++
+		abf.ClientsIPs[ip] = client
+		return true, nil
 	}
 
-	return isInList, nil
+	fmt.Println("IP END")
+	return false, nil
+}
+
+func (abf *AntiBrutForce) CheckIPInList(ip net.IP) (passed bool, isFound bool, err error) {
+	if _, ok := abf.CertainedIps[ip.String()]; !ok {
+		return false, false, nil
+	}
+	addr := abf.CertainedIps[ip.String()]
+	return addr.Passed, true, nil
+}
+
+func (abf *AntiBrutForce) AddToList(cidr string, passed bool) error {
+	addr, ipNet, err := net.ParseCIDR(cidr)
+	fmt.Println(addr, ipNet, err)
+	_, isFound, err := abf.CheckIPInList(addr)
+	if err != nil {
+		return err
+	}
+	if isFound {
+		return ErrIPInListYet
+	}
+
+	address := IPNet{
+		Cidr:   cidr,
+		Mask:   ipNet,
+		Passed: passed,
+	}
+	abf.CertainedIps[addr.String()] = address
+	return nil
+}
+
+func (abf *AntiBrutForce) DeleteFromList(cidr string) error {
+	addr, _, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return err
+	}
+
+	_, isFound, err := abf.CheckIPInList(addr)
+	if err != nil {
+		return err
+	}
+	if !isFound {
+		return ErrNoSuchIP
+	}
+
+	delete(abf.CertainedIps, addr.String())
+	return nil
 }
 
 func (abf *AntiBrutForce) ClearOldLoginBuckets() {
+	fmt.Println(abf.ClientsLogins)
 	for c, b := range abf.ClientsLogins {
 		if time.Since(b.Timer) > BucketLivingTime {
+			fmt.Println(c)
 			delete(abf.ClientsLogins, c)
 		}
 	}
+	fmt.Println(abf.ClientsLogins)
+}
+
+func (abf *AntiBrutForce) ClearLoginBuckets(login string) error {
+	if _, ok := abf.ClientsLogins[login]; !ok {
+		return ErrNoSuchLogin
+	}
+	delete(abf.ClientsLogins, login)
+	return nil
+}
+
+func (abf *AntiBrutForce) ClearIPBuckets(ip string) error {
+	if _, ok := abf.ClientsIPs[ip]; !ok {
+		return ErrNoSuchIP
+	}
+	delete(abf.ClientsIPs, ip)
+	return nil
 }
 
 func (abf *AntiBrutForce) ClearAllBuckets() {

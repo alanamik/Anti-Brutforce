@@ -5,13 +5,12 @@ type Service struct {
 	Port int    `yaml:"port"`
 }
 
-type Redis struct {
-	Address string `yaml:"address"`
-	DB      int    `yaml:"db"`
-}
-
 type Parameters struct {
 	LimitLogin    int `yaml:"limitLogin"`
 	LimitPassword int `yaml:"limitPassword"`
-	LimitIP       int `yaml:"limitIP"`
+	LimitIP       int `yaml:"limitIp"`
+}
+
+type ListIPs struct {
+	Path string `yaml:"pathFile"`
 }
