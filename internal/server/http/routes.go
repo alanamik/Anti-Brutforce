@@ -47,7 +47,7 @@ func (s *Server) routes() *http.ServeMux {
 			StatusCode: 200,
 			Status:     SuccessAddListStatus,
 		}
-		respondWithSuccess(w, 200, res)
+		respondWithSuccess(w, res)
 	})
 
 	mux.HandleFunc("/deleteWhiteIP", func(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +60,7 @@ func (s *Server) routes() *http.ServeMux {
 			respondWithError(w, 500, ErrInternalServerError500.Error())
 			return
 		}
-		err := s.Abf.DeleteFromList(req.IP)
+		err := s.Abf.DeleteFromList(req.Cidr)
 		if err != nil {
 			if errors.Is(err, antibrutforce.ErrNoSuchIP) {
 				respondWithError(w, 400, antibrutforce.ErrNoSuchIP.Error())
@@ -74,7 +74,62 @@ func (s *Server) routes() *http.ServeMux {
 			StatusCode: 200,
 			Status:     SuccessDeleteListStatus,
 		}
-		respondWithSuccess(w, 200, res)
+		respondWithSuccess(w, res)
+	})
+
+	mux.HandleFunc("/addBlackIp", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			respondWithError(w, 500, "The method should be POST")
+			return
+		}
+		var req AddIPIn
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			respondWithError(w, 500, ErrInternalServerError500.Error())
+			return
+		}
+		err = s.Abf.AddToList(req.Cidr, false)
+		if err != nil {
+			if errors.Is(err, antibrutforce.ErrIPInListYet) {
+				respondWithError(w, 400, err.Error())
+			} else {
+				respondWithError(w, 500, ErrInternalServerError500.Error())
+			}
+			return
+		}
+
+		res := ResponseSuccess{
+			StatusCode: 200,
+			Status:     SuccessAddListStatus,
+		}
+		respondWithSuccess(w, res)
+	})
+
+	mux.HandleFunc("/deleteBlackIP", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			respondWithError(w, 500, "The method should be DELETE")
+			return
+		}
+		var req DeleteIPIn
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			respondWithError(w, 500, ErrInternalServerError500.Error())
+			return
+		}
+		err := s.Abf.DeleteFromList(req.Cidr)
+		if err != nil {
+			if errors.Is(err, antibrutforce.ErrNoSuchIP) {
+				respondWithError(w, 400, antibrutforce.ErrNoSuchIP.Error())
+			} else {
+				respondWithError(w, 500, ErrInternalServerError500.Error())
+			}
+			return
+		}
+
+		res := ResponseSuccess{
+			StatusCode: 200,
+			Status:     SuccessDeleteListStatus,
+		}
+		respondWithSuccess(w, res)
 	})
 
 	mux.HandleFunc("/clearBucket", func(w http.ResponseWriter, r *http.Request) {
@@ -87,12 +142,13 @@ func (s *Server) routes() *http.ServeMux {
 			respondWithError(w, 500, ErrInternalServerError500.Error())
 			return
 		}
-		// err := s.Abf.ClearIPBuckets(req.Ip)
-		// if errors.Is(err, antibrutforce.ErrNoSuchIP) {
-		// 	respondWithError(w, 400, antibrutforce.ErrNoSuchIP.Error())
-		// 	return
-		// }
-		err := s.Abf.ClearLoginBuckets(req.Login)
+		err := s.Abf.ClearIPBuckets(req.IP)
+		if errors.Is(err, antibrutforce.ErrNoSuchIP) {
+			respondWithError(w, 400, antibrutforce.ErrNoSuchIP.Error())
+			return
+		}
+
+		err = s.Abf.ClearLoginBuckets(req.Login)
 		if errors.Is(err, antibrutforce.ErrNoSuchLogin) {
 			respondWithError(w, 400, antibrutforce.ErrNoSuchLogin.Error())
 			return
@@ -102,19 +158,19 @@ func (s *Server) routes() *http.ServeMux {
 			StatusCode: 200,
 			Status:     SuccessClearBucket,
 		}
-		respondWithSuccess(w, 200, res)
+		respondWithSuccess(w, res)
 	})
 
 	return mux
 }
 
-func respondWithSuccess(w http.ResponseWriter, code int, payload interface{}) error {
+func respondWithSuccess(w http.ResponseWriter, payload interface{}) error {
 	response, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
+	w.WriteHeader(200)
 	w.Write(response)
 	return nil
 }

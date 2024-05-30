@@ -26,7 +26,7 @@ type AntiBrutForce interface {
 
 	ClearLoginBuckets(login string) error
 	ClearIPBuckets(ip string) error
-	ClearOldLoginBuckets()
+	ClearOldBuckets()
 	ClearAllBuckets()
 }
 type Server struct {
@@ -46,7 +46,7 @@ func New(abf *antibrutforce.AntiBrutForce, conf *config.Config) *Server {
 	return &server
 }
 
-func (s *Server) Start(ctx context.Context) error {
+func (s *Server) Start() error {
 	middleware := s.CheckRequest(s.Serv.Handler)
 	err := http.ListenAndServe(s.Serv.Addr, middleware)
 	if err != nil {

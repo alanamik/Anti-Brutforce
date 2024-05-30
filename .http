@@ -7,6 +7,7 @@ Content-Type: application/json
     "password": "user1"
 }
 ###
+
 POST  http://[::]:8000/addWhiteIp
 Content-Type: application/json
 
@@ -14,6 +15,7 @@ Content-Type: application/json
     "cidr": "145.92.137.88/20"
 }
 ###
+
 DELETE   http://[::]:8000/deleteWhiteIP
 Content-Type: application/json
 
@@ -21,6 +23,7 @@ Content-Type: application/json
     "cidr": "145.92.137.88/20"
 }
 ###
+
 DELETE   http://[::]:8000/clearBucket
 Content-Type: application/json
 

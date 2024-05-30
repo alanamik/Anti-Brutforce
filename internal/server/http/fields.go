@@ -20,7 +20,7 @@ type AddIPIn struct {
 	Cidr string `json:"cidr"`
 }
 type DeleteIPIn struct {
-	IP string `json:"cidr"`
+	Cidr string `json:"cidr"`
 }
 
 type ClearBucketIn struct {

@@ -15,7 +15,7 @@ import (
 
 const (
 	BucketRangeTime  time.Duration = time.Minute * 1
-	BucketLivingTime time.Duration = time.Second * 10
+	BucketLivingTime time.Duration = time.Minute * 5
 )
 
 var (
@@ -125,9 +125,7 @@ func (abf *AntiBrutForce) CheckLogin(login string) (bool, error) {
 		abf.ClientsLogins[login] = client
 		return true, nil
 	}
-	// in the map
 	client := abf.ClientsLogins[login]
-	// Если с времени первого запроса после обнуления прошло больше минуты, то обнуляем время для клиента
 	if time.Since(client.Timer) > BucketRangeTime {
 		fmt.Println("L ZERO")
 		client.Timer = time.Now()
@@ -135,7 +133,6 @@ func (abf *AntiBrutForce) CheckLogin(login string) (bool, error) {
 		abf.ClientsLogins[login] = client
 		return true, nil
 	}
-	// Если с времени первого запроса не прошло больше минуты И лимит попыток не превышен, то пропускаем
 	if (time.Since(client.Timer) < BucketRangeTime) && client.RequestsPerMinutes <= abf.LimitLogin {
 		fmt.Println("L PASSED - ", client.RequestsPerMinutes)
 		client.RequestsPerMinutes++
@@ -157,9 +154,7 @@ func (abf *AntiBrutForce) CheckPassword(password string) (bool, error) {
 		abf.ClientsIPs[password] = client
 		return true, nil
 	}
-	// in the map
 	client := abf.ClientsPasswords[password]
-	// Если с времени первого запроса после обнуления прошло больше минуты, то обнуляем время для клиента
 	if time.Since(client.Timer) > BucketRangeTime {
 		fmt.Println("ZERO P")
 		client.Timer = time.Now()
@@ -167,7 +162,6 @@ func (abf *AntiBrutForce) CheckPassword(password string) (bool, error) {
 		abf.ClientsPasswords[password] = client
 		return true, nil
 	}
-	// Если с времени первого запроса не прошло больше минуты И лимит попыток не превышен, то пропускаем
 	if (time.Since(client.Timer) < BucketRangeTime) && client.RequestsPerMinutes <= abf.LimitPassword {
 		fmt.Println("PASSED P- ", client.RequestsPerMinutes)
 		client.RequestsPerMinutes++
@@ -189,9 +183,7 @@ func (abf *AntiBrutForce) CheckIP(ip string) (bool, error) {
 		abf.ClientsIPs[ip] = client
 		return true, nil
 	}
-	// in the map
 	client := abf.ClientsIPs[ip]
-	// Если с времени первого запроса после обнуления прошло больше минуты, то обнуляем время для клиента
 	if time.Since(client.Timer) > BucketRangeTime {
 		fmt.Println("ZERO IP")
 		client.Timer = time.Now()
@@ -199,7 +191,6 @@ func (abf *AntiBrutForce) CheckIP(ip string) (bool, error) {
 		abf.ClientsIPs[ip] = client
 		return true, nil
 	}
-	// Если с времени первого запроса не прошло больше минуты И лимит попыток не превышен, то пропускаем
 	if (time.Since(client.Timer) < BucketRangeTime) && client.RequestsPerMinutes <= abf.LimitIP {
 		fmt.Println("PASSED IP- ", client.RequestsPerMinutes)
 		client.RequestsPerMinutes++
@@ -257,7 +248,7 @@ func (abf *AntiBrutForce) DeleteFromList(cidr string) error {
 	return nil
 }
 
-func (abf *AntiBrutForce) ClearOldLoginBuckets() {
+func (abf *AntiBrutForce) ClearOldBuckets() {
 	fmt.Println(abf.ClientsLogins)
 	for c, b := range abf.ClientsLogins {
 		if time.Since(b.Timer) > BucketLivingTime {
@@ -266,6 +257,22 @@ func (abf *AntiBrutForce) ClearOldLoginBuckets() {
 		}
 	}
 	fmt.Println(abf.ClientsLogins)
+
+	fmt.Println(abf.ClientsIPs)
+	for c, b := range abf.ClientsIPs {
+		if time.Since(b.Timer) > BucketLivingTime {
+			delete(abf.ClientsIPs, c)
+		}
+	}
+	fmt.Println(abf.ClientsIPs)
+
+	fmt.Println(abf.ClientsPasswords)
+	for c, b := range abf.ClientsPasswords {
+		if time.Since(b.Timer) > BucketLivingTime {
+			delete(abf.ClientsPasswords, c)
+		}
+	}
+	fmt.Println(abf.ClientsPasswords)
 }
 
 func (abf *AntiBrutForce) ClearLoginBuckets(login string) error {

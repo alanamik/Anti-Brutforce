@@ -5,7 +5,6 @@ import (
 	"OTUS_hws/Anti-BruteForce/internal/config"
 	server "OTUS_hws/Anti-BruteForce/internal/server/http"
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -29,10 +28,8 @@ func main() {
 		panic(err)
 	}
 	server := server.New(abfChecker, conf)
-	ctx := context.Background()
 
-	// TODO: change time of ticker
-	interval := time.Duration(30) * time.Second
+	interval := time.Duration(10) * time.Second // clear one time in 10 minutes
 	tk := time.NewTicker(interval)
 	tickerChan := make(chan bool)
 	go func() {
@@ -40,15 +37,14 @@ func main() {
 			select {
 			case <-tickerChan:
 				return
-			case tm := <-tk.C:
-				fmt.Println(tm)
-				abfChecker.ClearOldLoginBuckets()
+			case <-tk.C:
+				abfChecker.ClearOldBuckets()
 			}
 		}
 	}()
 
 	go func() {
-		if err := server.Start(ctx); err != nil {
+		if err := server.Start(); err != nil {
 			os.Exit(1)
 		}
 	}()
