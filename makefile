@@ -7,8 +7,14 @@ build:
 run: build
 	$(BIN) -config ./configs/dev.yml 
 
+run-test: build
+	$(BIN) -config ./configs/test.yml &
+
 test:
-	go test -timeout=10s -count=1 -v ./internal/...
+	go test -timeout=90s -count=1 -v ./internal/...
+
+test-http: 
+	go test -timeout=3m -count=1 -v ./tests/...
 #./pkg/...
 
 

@@ -4,7 +4,6 @@ import (
 	"OTUS_hws/Anti-BruteForce/internal/antibrutforce"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 )
 
@@ -19,7 +18,11 @@ var (
 func (s *Server) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("/HELLO")
+		res := ResponseSuccess{
+			StatusCode: 200,
+			Status:     "Access is allowed",
+		}
+		respondWithSuccess(w, res)
 	})
 
 	mux.HandleFunc("/addWhiteIp", func(w http.ResponseWriter, r *http.Request) {

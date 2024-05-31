@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -13,11 +14,16 @@ func (s *Server) CheckRequest(next http.Handler) http.Handler {
 				return
 			}
 		}
+		if r.Method != http.MethodPost {
+			respondWithError(w, 500, "The method should be POST")
+			return
+		}
 		var req CheckRequestIn
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			respondWithError(w, 500, ErrInternalServerError500.Error())
 			return
 		}
+		fmt.Println(req.IP, req.Login, req.Password)
 		pass, err := s.Abf.CheckRequest(r.Context(), req.IP, req.Login, req.Password)
 		if err != nil {
 			respondWithError(w, 500, ErrInternalServerError500.Error())

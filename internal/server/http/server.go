@@ -60,6 +60,7 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) Stop(ctx context.Context) error {
+	s.Abf.ClearAllBuckets()
 	err := s.Serv.Shutdown(ctx)
 	if err != nil {
 		fmt.Println("server shutdown error: " + err.Error())

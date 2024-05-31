@@ -102,12 +102,11 @@ func (abf *AntiBrutForce) CheckRequest(ctx context.Context, ip string, login str
 	if err != nil || !passed {
 		return false, err
 	}
-	passed, err = abf.CheckLogin(login)
+	passed, err = abf.CheckPassword(password)
 	if err != nil || !passed {
 		return false, err
 	}
-
-	passed, err = abf.CheckPassword(password)
+	passed, err = abf.CheckLogin(login)
 	if err != nil || !passed {
 		return false, err
 	}
@@ -151,9 +150,10 @@ func (abf *AntiBrutForce) CheckPassword(password string) (bool, error) {
 			RequestsPerMinutes: 1,
 			Timer:              time.Now(),
 		}
-		abf.ClientsIPs[password] = client
+		abf.ClientsPasswords[password] = client
 		return true, nil
 	}
+
 	client := abf.ClientsPasswords[password]
 	if time.Since(client.Timer) > BucketRangeTime {
 		fmt.Println("ZERO P")
@@ -249,30 +249,21 @@ func (abf *AntiBrutForce) DeleteFromList(cidr string) error {
 }
 
 func (abf *AntiBrutForce) ClearOldBuckets() {
-	fmt.Println(abf.ClientsLogins)
 	for c, b := range abf.ClientsLogins {
 		if time.Since(b.Timer) > BucketLivingTime {
-			fmt.Println(c)
 			delete(abf.ClientsLogins, c)
 		}
 	}
-	fmt.Println(abf.ClientsLogins)
-
-	fmt.Println(abf.ClientsIPs)
 	for c, b := range abf.ClientsIPs {
 		if time.Since(b.Timer) > BucketLivingTime {
 			delete(abf.ClientsIPs, c)
 		}
 	}
-	fmt.Println(abf.ClientsIPs)
-
-	fmt.Println(abf.ClientsPasswords)
 	for c, b := range abf.ClientsPasswords {
 		if time.Since(b.Timer) > BucketLivingTime {
 			delete(abf.ClientsPasswords, c)
 		}
 	}
-	fmt.Println(abf.ClientsPasswords)
 }
 
 func (abf *AntiBrutForce) ClearLoginBuckets(login string) error {
@@ -295,10 +286,9 @@ func (abf *AntiBrutForce) ClearAllBuckets() {
 	for c := range abf.ClientsLogins {
 		delete(abf.ClientsLogins, c)
 	}
-	for c := range abf.ClientsPasswords {
-		delete(abf.ClientsPasswords, c)
+	for c := range abf.ClientsIPs {
+		delete(abf.ClientsIPs, c)
 	}
-
 	for c := range abf.ClientsPasswords {
 		delete(abf.ClientsPasswords, c)
 	}

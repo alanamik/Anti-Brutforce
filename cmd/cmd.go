@@ -29,7 +29,7 @@ func main() {
 	}
 	server := server.New(abfChecker, conf)
 
-	interval := time.Duration(10) * time.Second // clear one time in 10 minutes
+	interval := time.Duration(10) * time.Minute // clear one time in 10 minutes
 	tk := time.NewTicker(interval)
 	tickerChan := make(chan bool)
 	go func() {
