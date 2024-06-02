@@ -1,21 +1,22 @@
 package server
 
 import (
-	"OTUS_hws/Anti-BruteForce/internal/antibrutforce"
-	"OTUS_hws/Anti-BruteForce/internal/config"
 	"context"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"time"
+
+	"OTUS_hws/Anti-BruteForce/internal/antibrutforce"
+	"OTUS_hws/Anti-BruteForce/internal/config"
 )
 
 var HandlersPaths = []string{"/addWhiteIp", "/addBlackIp", "/deleteWhiteIP", "/deleteBlackIP", "/clearBucket"}
 
 type AntiBrutForce interface {
 	LoadCertainedIps(filePath string) error
-	CheckRequest(ctx context.Context, ip string, login string, password string) (bool, error)
+	CheckRequest(ip string, login string, password string) (bool, error)
 	CheckLogin(login string) (bool, error)
 	CheckPassword(password string) (bool, error)
 	CheckIP(ip string) (bool, error)
@@ -41,7 +42,9 @@ func New(abf *antibrutforce.AntiBrutForce, conf *config.Config) *Server {
 	server.Serv = &http.Server{
 		Addr:              conf.Service.Host + ":" + fmt.Sprint(conf.Service.Port),
 		Handler:           server.routes(),
-		ReadHeaderTimeout: 5 * time.Second,
+		ReadHeaderTimeout: 1 * time.Second,
+		ReadTimeout:       2 * time.Second,
+		WriteTimeout:      10 * time.Second,
 	}
 	return &server
 }

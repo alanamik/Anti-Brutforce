@@ -1,14 +1,12 @@
 package antibrutforce
 
 import (
-	"context"
 	"errors"
 	"net"
 	"os"
 	"time"
 
 	"OTUS_hws/Anti-BruteForce/internal/config"
-
 	"gopkg.in/yaml.v2"
 )
 
@@ -87,7 +85,7 @@ func (abf *AntiBrutForce) LoadCertainedIps(filePath string) error {
 	return nil
 }
 
-func (abf *AntiBrutForce) CheckRequest(ctx context.Context, ip string, login string, password string) (bool, error) {
+func (abf *AntiBrutForce) CheckRequest(ip string, login string, password string) (bool, error) {
 	// проверяем сначала IP, если есть в листах, то прерываем проверку
 	addr := net.ParseIP(ip)
 	val, isFound, err := abf.CheckIPInList(addr)

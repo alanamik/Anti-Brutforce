@@ -1,15 +1,15 @@
 package main
 
 import (
-	"OTUS_hws/Anti-BruteForce/internal/antibrutforce"
-	"OTUS_hws/Anti-BruteForce/internal/config"
-	server "OTUS_hws/Anti-BruteForce/internal/server/http"
 	"context"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"OTUS_hws/Anti-BruteForce/internal/antibrutforce"
+	"OTUS_hws/Anti-BruteForce/internal/config"
+	server "OTUS_hws/Anti-BruteForce/internal/server/http"
 	"github.com/pkg/errors"
 )
 

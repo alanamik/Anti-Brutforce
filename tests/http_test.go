@@ -1,17 +1,21 @@
 package tests
 
 import (
-	server "OTUS_hws/Anti-BruteForce/internal/server/http"
 	"bytes"
+	"context"
 	"encoding/json"
-	"fmt"
-	"io"
-	"log"
 	"net/http"
 	"testing"
 	"time"
 
+	server "OTUS_hws/Anti-BruteForce/internal/server/http"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	limitLogin    = 6
+	limitPassword = 8
+	limitIP       = 10
 )
 
 type ResponseSuccess struct {
@@ -24,11 +28,8 @@ type ResponseError struct {
 	StatusCode int    `json:"code"`
 }
 
+//nolint:gocognit
 func TestABFServer(t *testing.T) {
-	limitLogin := 6
-	limitPassword := 8
-	limitIP := 10
-
 	inputCheckReqsIn := []server.CheckRequestIn{
 		{IP: "23.44.135.90", Login: "user1", Password: "ghfgh"},
 		{IP: "100.44.100.50", Login: "user2", Password: "dfvdfv"},
@@ -45,7 +46,7 @@ func TestABFServer(t *testing.T) {
 			data, err := json.Marshal(d)
 			require.NoError(t, err)
 			buf := bytes.NewBuffer(data)
-			req, err := http.NewRequest("DELETE", "http://0.0.0.0:8000/clearBucket", buf)
+			req, err := http.NewRequestWithContext(context.Background(), "DELETE", "http://0.0.0.0:8000/clearBucket", buf)
 			require.NoError(t, err)
 			resp, err := client.Do(req)
 			require.NoError(t, err)
@@ -58,6 +59,7 @@ func TestABFServer(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Failed Request(): %s", err)
 				}
+				defer resp.Body.Close()
 				require.Equal(t, 200, resp.StatusCode)
 				time.Sleep(10 * time.Second)
 			}
@@ -67,6 +69,7 @@ func TestABFServer(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Failed Request(): %s", err)
 				}
+				defer resp.Body.Close()
 				if i <= limitLogin {
 					require.Equal(t, 200, resp.StatusCode)
 					time.Sleep(5 * time.Second)
@@ -83,6 +86,7 @@ func TestABFServer(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Failed Request(): %s", err)
 				}
+				defer resp.Body.Close()
 				if i <= limitPassword {
 					require.Equal(t, 200, resp.StatusCode)
 					time.Sleep(5 * time.Second)
@@ -96,6 +100,7 @@ func TestABFServer(t *testing.T) {
 			whiteCidr := "33.87.120.175/20"
 			resp, err := RequestAddInList(whiteCidr, client, true)
 			require.NoError(t, err)
+			defer resp.Body.Close()
 			require.Equal(t, 200, resp.StatusCode)
 			whiteReq := server.CheckRequestIn{
 				IP:       "33.87.120.175",
@@ -107,11 +112,13 @@ func TestABFServer(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Failed Request(): %s", err)
 				}
+				defer resp.Body.Close()
 				require.Equal(t, 200, resp.StatusCode)
 			}
 			// Whitelist delete
 			resp, err = RequestDeleteFromList(whiteCidr, client, true)
 			require.NoError(t, err)
+			defer resp.Body.Close()
 			require.Equal(t, 200, resp.StatusCode)
 			for i := 0; i <= limitIP+3; i++ {
 				if i == limitLogin {
@@ -122,6 +129,7 @@ func TestABFServer(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Failed Request(): %s", err)
 				}
+				defer resp.Body.Close()
 				if i <= limitIP {
 					require.Equal(t, 200, resp.StatusCode)
 				} else {
@@ -132,6 +140,7 @@ func TestABFServer(t *testing.T) {
 			blackCidr := "145.67.100.175/20"
 			resp, err = RequestAddInList(blackCidr, client, false)
 			require.NoError(t, err)
+			defer resp.Body.Close()
 			require.Equal(t, 200, resp.StatusCode)
 			blackReq := server.CheckRequestIn{
 				IP:       "145.67.100.175",
@@ -143,10 +152,12 @@ func TestABFServer(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed Request(): %s", err)
 			}
+			defer resp.Body.Close()
 			require.Equal(t, 400, resp.StatusCode)
 			// Whitelist delete
 			resp, err = RequestDeleteFromList(blackCidr, client, false)
 			require.NoError(t, err)
+			defer resp.Body.Close()
 			require.Equal(t, 200, resp.StatusCode)
 
 			for i := 0; i <= limitIP+3; i++ {
@@ -158,6 +169,7 @@ func TestABFServer(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Failed Request(): %s", err)
 				}
+				defer resp.Body.Close()
 				if i <= limitIP {
 					require.Equal(t, 200, resp.StatusCode)
 				} else {
@@ -169,95 +181,80 @@ func TestABFServer(t *testing.T) {
 	t.SkipNow()
 }
 
-func RequestAuth(req server.CheckRequestIn, client *http.Client) (*http.Response, error) {
-	data, err := json.Marshal(req)
+func RequestAuth(val server.CheckRequestIn, client *http.Client) (*http.Response, error) {
+	data, err := json.Marshal(val)
 	if err != nil {
 		return nil, err
 	}
 	buf := bytes.NewBuffer(data)
-	resp, err := client.Post("http://0.0.0.0:8000/hello", "application/json", buf)
+	req, err := http.NewRequestWithContext(context.Background(), "POST", "http://0.0.0.0:8000/hello", buf)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalf("Failed reading response body: %s", err)
-	}
-	fmt.Printf("Got response %d: %s %s", resp.StatusCode, resp.Proto, string(body))
-	fmt.Println()
 	return resp, nil
 }
 
 func RequestAddInList(cidr string, client *http.Client, passed bool) (*http.Response, error) {
-	req := server.AddIPIn{
+	val := server.AddIPIn{
 		Cidr: cidr,
 	}
-	data, err := json.Marshal(req)
+	data, err := json.Marshal(val)
 	if err != nil {
 		return nil, err
 	}
 	buf := bytes.NewBuffer(data)
 	var resp *http.Response
+	var req *http.Request
 	if passed {
-		resp, err = client.Post("http://0.0.0.0:8000/addWhiteIp", "application/json", buf)
+		req, err = http.NewRequestWithContext(context.Background(), "POST", "http://0.0.0.0:8000/addWhiteIp", buf)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		resp, err = client.Post("http://0.0.0.0:8000/addBlackIp", "application/json", buf)
+		req, err = http.NewRequestWithContext(context.Background(), "POST", "http://0.0.0.0:8000/addBlackIp", buf)
 		if err != nil {
 			return nil, err
 		}
 	}
-
-	body, err := io.ReadAll(resp.Body)
+	resp, err = client.Do(req)
 	if err != nil {
-		log.Fatalf("Failed reading response body: %s", err)
+		return nil, err
 	}
-	fmt.Printf("Got response %d: %s %s", resp.StatusCode, resp.Proto, string(body))
-	fmt.Println()
 	defer resp.Body.Close()
 	return resp, nil
 }
 
 func RequestDeleteFromList(cidr string, client *http.Client, passed bool) (*http.Response, error) {
-	req := server.DeleteIPIn{
+	val := server.DeleteIPIn{
 		Cidr: cidr,
 	}
-	data, err := json.Marshal(req)
+	data, err := json.Marshal(val)
 	if err != nil {
 		return nil, err
 	}
 	buf := bytes.NewBuffer(data)
 	var resp *http.Response
+	var req *http.Request
 	if passed {
-		req, err := http.NewRequest("DELETE", "http://0.0.0.0:8000/deleteWhiteIP", buf)
-		if err != nil {
-			return nil, err
-		}
-		resp, err = client.Do(req)
+		req, err = http.NewRequestWithContext(context.Background(), "DELETE", "http://0.0.0.0:8000/deleteWhiteIP", buf)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		req, err := http.NewRequest("DELETE", "http://0.0.0.0:8000/deleteBlackIP", buf)
-		if err != nil {
-			return nil, err
-		}
-		resp, err = client.Do(req)
+		req, err = http.NewRequestWithContext(context.Background(), "DELETE", "http://0.0.0.0:8000/deleteBlackIP", buf)
 		if err != nil {
 			return nil, err
 		}
 	}
-
-	body, err := io.ReadAll(resp.Body)
+	resp, err = client.Do(req)
 	if err != nil {
-		log.Fatalf("Failed reading response body: %s", err)
+		return nil, err
 	}
-	fmt.Printf("Got response %d: %s %s", resp.StatusCode, resp.Proto, string(body))
-	fmt.Println()
 	defer resp.Body.Close()
 	return resp, nil
 }

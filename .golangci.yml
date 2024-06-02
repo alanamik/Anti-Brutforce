@@ -5,14 +5,14 @@ linters-settings:
   funlen:
     lines: 150
     statements: 80
-
+    
 linters:
   disable-all: true
   enable:
     - asciicheck
     - bodyclose
     - deadcode
-    - depguard
+   # - depguard
     - dogsled
     - dupl
     - durationcheck

@@ -1,12 +1,11 @@
 package antibrutforce
 
 import (
-	"OTUS_hws/Anti-BruteForce/internal/config"
-	"context"
 	"net"
 	"os"
 	"testing"
 
+	"OTUS_hws/Anti-BruteForce/internal/config"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -116,12 +115,12 @@ func TestAntibrutforceCore(t *testing.T) {
 
 		// Check common request
 		// blocked yet
-		pass, err = abf.CheckRequest(context.Background(), inputClientIPs[1], inputClientLogins[1], inputClientPassword[1])
+		pass, err = abf.CheckRequest(inputClientIPs[1], inputClientLogins[1], inputClientPassword[1])
 		require.NoError(t, err)
 		require.Equal(t, false, pass)
 		// new request
 		for i := 0; i <= abf.LimitIP; i++ {
-			pass, err := abf.CheckRequest(context.Background(), inputClientIPs[2], inputClientLogins[2], inputClientPassword[2])
+			pass, err := abf.CheckRequest(inputClientIPs[2], inputClientLogins[2], inputClientPassword[2])
 			if i <= abf.LimitLogin {
 				require.NoError(t, err)
 				require.Equal(t, true, pass)
@@ -136,5 +135,4 @@ func TestAntibrutforceCore(t *testing.T) {
 		require.Len(t, abf.ClientsLogins, 0)
 		require.Len(t, abf.ClientsPasswords, 0)
 	})
-
 }
