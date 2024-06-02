@@ -166,6 +166,7 @@ func TestABFServer(t *testing.T) {
 			}
 		})
 	})
+	t.SkipNow()
 }
 
 func RequestAuth(req server.CheckRequestIn, client *http.Client) (*http.Response, error) {

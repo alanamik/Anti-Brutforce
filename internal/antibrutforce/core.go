@@ -3,7 +3,6 @@ package antibrutforce
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"os"
 	"time"
@@ -116,7 +115,6 @@ func (abf *AntiBrutForce) CheckRequest(ctx context.Context, ip string, login str
 
 func (abf *AntiBrutForce) CheckLogin(login string) (bool, error) {
 	if _, ok := abf.ClientsLogins[login]; !ok {
-		fmt.Println("NO L IN MAP")
 		client := Bucket{
 			RequestsPerMinutes: 1,
 			Timer:              time.Now(),
@@ -126,26 +124,22 @@ func (abf *AntiBrutForce) CheckLogin(login string) (bool, error) {
 	}
 	client := abf.ClientsLogins[login]
 	if time.Since(client.Timer) > BucketRangeTime {
-		fmt.Println("L ZERO")
 		client.Timer = time.Now()
 		client.RequestsPerMinutes = 1
 		abf.ClientsLogins[login] = client
 		return true, nil
 	}
 	if (time.Since(client.Timer) < BucketRangeTime) && client.RequestsPerMinutes <= abf.LimitLogin {
-		fmt.Println("L PASSED - ", client.RequestsPerMinutes)
 		client.RequestsPerMinutes++
 		abf.ClientsLogins[login] = client
 		return true, nil
 	}
 
-	fmt.Println("L END")
 	return false, nil
 }
 
 func (abf *AntiBrutForce) CheckPassword(password string) (bool, error) {
 	if _, ok := abf.ClientsPasswords[password]; !ok {
-		fmt.Println("NO P IN MAP")
 		client := Bucket{
 			RequestsPerMinutes: 1,
 			Timer:              time.Now(),
@@ -156,26 +150,22 @@ func (abf *AntiBrutForce) CheckPassword(password string) (bool, error) {
 
 	client := abf.ClientsPasswords[password]
 	if time.Since(client.Timer) > BucketRangeTime {
-		fmt.Println("ZERO P")
 		client.Timer = time.Now()
 		client.RequestsPerMinutes = 1
 		abf.ClientsPasswords[password] = client
 		return true, nil
 	}
 	if (time.Since(client.Timer) < BucketRangeTime) && client.RequestsPerMinutes <= abf.LimitPassword {
-		fmt.Println("PASSED P- ", client.RequestsPerMinutes)
 		client.RequestsPerMinutes++
 		abf.ClientsPasswords[password] = client
 		return true, nil
 	}
 
-	fmt.Println("P END")
 	return false, nil
 }
 
 func (abf *AntiBrutForce) CheckIP(ip string) (bool, error) {
 	if _, ok := abf.ClientsIPs[ip]; !ok {
-		fmt.Println("NO IP IN MAP")
 		client := Bucket{
 			RequestsPerMinutes: 1,
 			Timer:              time.Now(),
@@ -185,20 +175,17 @@ func (abf *AntiBrutForce) CheckIP(ip string) (bool, error) {
 	}
 	client := abf.ClientsIPs[ip]
 	if time.Since(client.Timer) > BucketRangeTime {
-		fmt.Println("ZERO IP")
 		client.Timer = time.Now()
 		client.RequestsPerMinutes = 1
 		abf.ClientsIPs[ip] = client
 		return true, nil
 	}
 	if (time.Since(client.Timer) < BucketRangeTime) && client.RequestsPerMinutes <= abf.LimitIP {
-		fmt.Println("PASSED IP- ", client.RequestsPerMinutes)
 		client.RequestsPerMinutes++
 		abf.ClientsIPs[ip] = client
 		return true, nil
 	}
 
-	fmt.Println("IP END")
 	return false, nil
 }
 
@@ -212,7 +199,9 @@ func (abf *AntiBrutForce) CheckIPInList(ip net.IP) (passed bool, isFound bool, e
 
 func (abf *AntiBrutForce) AddToList(cidr string, passed bool) error {
 	addr, ipNet, err := net.ParseCIDR(cidr)
-	fmt.Println(addr, ipNet, err)
+	if err != nil {
+		return err
+	}
 	_, isFound, err := abf.CheckIPInList(addr)
 	if err != nil {
 		return err
