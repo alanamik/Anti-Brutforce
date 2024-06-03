@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"OTUS_hws/Anti-BruteForce/internal/antibrutforce"
+	"github.com/alanamik/Anti-Brutforce/internal/antibrutforce"
 )
 
 // A handler for test middleware.

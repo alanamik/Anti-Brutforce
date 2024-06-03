@@ -7,9 +7,9 @@ import (
 	"syscall"
 	"time"
 
-	"OTUS_hws/Anti-BruteForce/internal/antibrutforce"
-	"OTUS_hws/Anti-BruteForce/internal/config"
-	server "OTUS_hws/Anti-BruteForce/internal/server/http"
+	"github.com/alanamik/Anti-Brutforce/internal/antibrutforce"
+	"github.com/alanamik/Anti-Brutforce/internal/config"
+	server "github.com/alanamik/Anti-Brutforce/internal/server/http"
 	"github.com/pkg/errors"
 )
 

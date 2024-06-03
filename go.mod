@@ -1,4 +1,4 @@
-module OTUS_hws/Anti-BruteForce
+module github.com/alanamik/Anti-Brutforce
 
 go 1.20
 

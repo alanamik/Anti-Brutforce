@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"OTUS_hws/Anti-BruteForce/internal/antibrutforce"
-	"OTUS_hws/Anti-BruteForce/internal/config"
+	"github.com/alanamik/Anti-Brutforce/internal/antibrutforce"
+	"github.com/alanamik/Anti-Brutforce/internal/config"
 )
 
 var HandlersPaths = []string{"/addWhiteIp", "/addBlackIp", "/deleteWhiteIP", "/deleteBlackIP", "/clearBucket"}

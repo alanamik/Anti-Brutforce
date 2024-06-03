@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	server "OTUS_hws/Anti-BruteForce/internal/server/http"
+	server "github.com/alanamik/Anti-Brutforce/internal/server/http"
 	"github.com/stretchr/testify/require"
 )
 

@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"OTUS_hws/Anti-BruteForce/internal/config"
+	"github.com/alanamik/Anti-Brutforce/internal/config"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )

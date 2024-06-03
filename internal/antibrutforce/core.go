@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"OTUS_hws/Anti-BruteForce/internal/config"
+	"github.com/alanamik/Anti-Brutforce/internal/config"
 	"gopkg.in/yaml.v2"
 )
 
