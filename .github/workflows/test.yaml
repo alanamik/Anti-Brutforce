@@ -51,6 +51,11 @@ jobs:
         run: go test -timeout=90s -count=1 -v ./internal/...
         working-directory:  ${{ github.workspace }} # ${{ env.BRANCH }}
 
+      - name: Docker test
+        run: docker build --pull --rm -f "dockerfile_test" -t antibrutforce:test "." 
+             docker run -d -p "8000:8000" antibrutforce:test
+        working-directory:  ${{ github.workspace }}
+
       - name: Integration tests
         run: go test -timeout=3m -count=1 -v ./tests/...
      #  if: env.BRANCH == 'dev'
