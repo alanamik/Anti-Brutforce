@@ -30,7 +30,7 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           version: v1.58.1
-          working-directory: ${{ env.BRANCH }}
+          working-directory: ${{ github.workspace }}
 
   tests:
     runs-on: self-hosted
