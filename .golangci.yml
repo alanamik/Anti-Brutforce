@@ -5,14 +5,21 @@ linters-settings:
   funlen:
     lines: 150
     statements: 80
-    
+  depguard:
+    rules:
+     main:
+        files:
+        - $all
+        deny:
+        - pkg: reflect
+          desc: Better to think about it
 linters:
   disable-all: true
   enable:
     - asciicheck
     - bodyclose
    # - deadcode
-   # - depguard
+    - depguard
     - dogsled
     - dupl
     - durationcheck
