@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -15,7 +14,8 @@ import (
 var HandlersPaths = []string{"/addWhiteIp", "/addBlackIp", "/deleteWhiteIP", "/deleteBlackIP", "/clearBucket"}
 
 type AntiBrutForce interface {
-	LoadCertainedIps(filePath string) error
+	LoadCertainedIps() error
+	SaveCertainedIpsInFile() error
 	CheckRequest(ip string, login string, password string) (bool, error)
 	CheckLogin(login string) (bool, error)
 	CheckPassword(password string) (bool, error)
@@ -50,20 +50,15 @@ func New(abf *antibrutforce.AntiBrutForce, conf *config.Config) *Server {
 }
 
 func (s *Server) Start() error {
-	middleware := s.CheckRequest(s.Serv.Handler)
-	err := http.ListenAndServe(s.Serv.Addr, middleware)
-	if err != nil {
-		if !errors.Is(err, http.ErrServerClosed) {
-			fmt.Println("server start error: ", err.Error())
-			return err
-		}
+	if err := s.Serv.ListenAndServe(); err != nil {
+		return err
 	}
-
 	return nil
 }
 
 func (s *Server) Stop(ctx context.Context) error {
 	s.Abf.ClearAllBuckets()
+	s.Abf.SaveCertainedIpsInFile()
 	err := s.Serv.Shutdown(ctx)
 	if err != nil {
 		fmt.Println("server shutdown error: " + err.Error())

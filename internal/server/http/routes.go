@@ -16,18 +16,18 @@ var (
 
 func (s *Server) routes() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/hello", func(w http.ResponseWriter, _ *http.Request) {
-		res := ResponseSuccess{
-			StatusCode: 200,
-			Status:     "Access is allowed",
-		}
-		respondWithSuccess(w, res)
-	})
-	mux.HandleFunc("/addWhiteIp", s.AddWhiteIPHandler)
-	mux.HandleFunc("/deleteWhiteIP", s.DeleteWhiteIPHandler)
-	mux.HandleFunc("/addBlackIp", s.AddBlackIPHandler)
-	mux.HandleFunc("/deleteBlackIP", s.DeleteBlackIPHandler)
-	mux.HandleFunc("/clearBucket", s.ClearBucket)
+	mux.Handle("/hello", s.CheckRequest(http.HandlerFunc(s.HelloHandler)))
+	// mux.HandleFunc("/addWhiteIp", s.AddWhiteIPHandler)
+	// mux.HandleFunc("/deleteWhiteIP", s.DeleteWhiteIPHandler)
+	// mux.HandleFunc("/addBlackIp", s.AddBlackIPHandler)
+	// mux.HandleFunc("/deleteBlackIP", s.DeleteBlackIPHandler)
+	// mux.HandleFunc("/clearBucket", s.ClearBucket)
+
+	mux.Handle("/addWhiteIp", s.CheckRequest(http.HandlerFunc(s.AddWhiteIPHandler)))
+	mux.Handle("/deleteWhiteIP", s.CheckRequest(http.HandlerFunc(s.DeleteWhiteIPHandler)))
+	mux.Handle("/addBlackIp", s.CheckRequest(http.HandlerFunc(s.AddBlackIPHandler)))
+	mux.Handle("/deleteBlackIP", s.CheckRequest(http.HandlerFunc(s.DeleteBlackIPHandler)))
+	mux.Handle("/clearBucket", s.CheckRequest(http.HandlerFunc(s.ClearBucket)))
 
 	return mux
 }

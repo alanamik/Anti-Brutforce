@@ -30,7 +30,7 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           version: v1.58.1
-          working-directory: ${{ github.workspace }} # ${{ env.BRANCH }}
+          working-directory: ${{ env.BRANCH }}
 
   tests:
     runs-on: self-hosted
@@ -55,12 +55,6 @@ jobs:
         run: go test -timeout=3m -count=1 -v ./tests/...
      #  if: env.BRANCH == 'dev'
         working-directory:  ${{ github.workspace }} # ${{ env.BRANCH }}
-
-      # - name: Bash tests
-      #   shell: bash
-      #   run: ./test.sh
-      #   if: contains('hw01_hello_otus hw07_file_copying hw08_envdir_tool hw11_telnet_client', env.BRANCH)
-      #   working-directory: ${{ env.BRANCH }}
 
   tests_by_makefile:
     runs-on: self-hosted

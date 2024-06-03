@@ -1,6 +1,7 @@
 package antibrutforce
 
 import (
+	"encoding/json"
 	"errors"
 	"net"
 	"os"
@@ -25,6 +26,7 @@ type AntiBrutForce struct {
 	LimitIP       int
 	LimitLogin    int
 	LimitPassword int
+	ListPathFile  string
 
 	ClientsLogins    map[string]Bucket
 	ClientsPasswords map[string]Bucket
@@ -54,21 +56,22 @@ func New(conf *config.Config) (*AntiBrutForce, error) {
 		LimitIP:       conf.Parameters.LimitIP,
 		LimitLogin:    conf.Parameters.LimitLogin,
 		LimitPassword: conf.Parameters.LimitPassword,
+		ListPathFile:  conf.IPs.Path,
 	}
 	abf.ClientsLogins = make(map[string]Bucket, 0)
 	abf.ClientsPasswords = make(map[string]Bucket, 0)
 	abf.ClientsIPs = make(map[string]Bucket, 0)
 
 	abf.CertainedIps = make(map[string]IPNet, 0)
-	err := abf.LoadCertainedIps(conf.IPs.Path)
+	err := abf.LoadCertainedIps()
 	if err != nil {
 		return nil, err
 	}
 	return abf, nil
 }
 
-func (abf *AntiBrutForce) LoadCertainedIps(filePath string) error {
-	b, err := os.ReadFile(filePath)
+func (abf *AntiBrutForce) LoadCertainedIps() error {
+	b, err := os.ReadFile(abf.ListPathFile)
 	if err != nil {
 		return err
 	}
@@ -77,11 +80,30 @@ func (abf *AntiBrutForce) LoadCertainedIps(filePath string) error {
 	if err != nil {
 		return err
 	}
-
 	for _, addr := range out {
 		abf.AddToList(addr.Cidr, addr.Passed)
 	}
 
+	return nil
+}
+
+func (abf *AntiBrutForce) SaveCertainedIpsInFile() error {
+	f, _ := os.Create(abf.ListPathFile)
+	defer f.Close()
+	f.WriteString("[")
+	for _, ip := range abf.CertainedIps {
+		as := IPNetIn{
+			Cidr:   ip.Cidr,
+			Passed: ip.Passed,
+		}
+		asJSON, err := json.MarshalIndent(as, "", "\t")
+		if err != nil {
+			return err
+		}
+		f.Write(asJSON)
+		f.WriteString(",")
+	}
+	f.WriteString("]")
 	return nil
 }
 

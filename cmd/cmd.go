@@ -28,7 +28,6 @@ func main() {
 		panic(err)
 	}
 	server := server.New(abfChecker, conf)
-
 	interval := time.Duration(10) * time.Minute // clear one time in 10 minutes
 	tk := time.NewTicker(interval)
 	tickerChan := make(chan bool)
@@ -42,14 +41,12 @@ func main() {
 			}
 		}
 	}()
-
 	go func() {
 		if err := server.Start(); err != nil {
 			os.Exit(1)
 		}
 	}()
 	<-quit
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	server.Stop(ctx)

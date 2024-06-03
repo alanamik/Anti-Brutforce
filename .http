@@ -1,8 +1,8 @@
-GET http://[::]:8000/hello
+POST http://[::]:8000/hello
 Content-Type: application/json
 
 {
-    "ip": "145.92.137.8",
+    "ip": "145.92.137.88",
     "login": "us1",
     "password": "user1"
 }

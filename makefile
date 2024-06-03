@@ -14,7 +14,10 @@ run-test: build
 test:
 	go test -timeout=90s -count=1 -v ./internal/...
 
-test-http: docker-run-test
+test-http-docker: docker-run-test
+	go test -timeout=3m -count=1 -v ./tests/... 
+
+test-http: run-test
 	go test -timeout=3m -count=1 -v ./tests/... 
 
 docker-build:

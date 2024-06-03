@@ -8,6 +8,15 @@ import (
 	"OTUS_hws/Anti-BruteForce/internal/antibrutforce"
 )
 
+// A handler for test middleware.
+func (s *Server) HelloHandler(w http.ResponseWriter, _ *http.Request) {
+	res := ResponseSuccess{
+		StatusCode: 200,
+		Status:     "Access is allowed",
+	}
+	respondWithSuccess(w, res)
+}
+
 func (s *Server) AddWhiteIPHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		respondWithError(w, 500, "The method should be POST")

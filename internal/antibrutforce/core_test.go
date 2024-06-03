@@ -1,6 +1,7 @@
 package antibrutforce
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"testing"
@@ -38,6 +39,13 @@ func TestAntibrutforceCore(t *testing.T) {
 		err = abf.AddToList(inputPassedIPs[2], true)
 		require.ErrorIs(t, err, ErrIPInListYet)
 
+		err = abf.SaveCertainedIpsInFile()
+		require.NoError(t, err)
+		err = abf.LoadCertainedIps()
+		require.NoError(t, err)
+		for _, i := range abf.CertainedIps {
+			fmt.Println(i)
+		}
 		// check deleting from lists
 		err = abf.DeleteFromList(inputBlockedIPs[1])
 		require.NoError(t, err)
