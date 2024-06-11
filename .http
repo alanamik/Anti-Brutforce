@@ -1,0 +1,37 @@
+POST http://[::]:8000/hello
+Content-Type: application/json
+
+{
+    "ip": "145.92.137.88",
+    "login": "us1",
+    "password": "user1"
+}
+###
+
+POST  http://[::]:8000/addWhiteIp
+Content-Type: application/json
+
+{
+    "cidr": "145.92.137.88/20"
+}
+###
+
+DELETE   http://[::]:8000/deleteWhiteIP
+Content-Type: application/json
+
+{
+    "cidr": "145.92.137.88/20"
+}
+###
+
+DELETE   http://[::]:8000/clearBucket
+Content-Type: application/json
+
+{
+    "ip": "145.92.137.88",
+    "login": "us1"
+}
+
+
+
+

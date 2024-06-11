@@ -1,0 +1,11 @@
+service:
+  host: "0.0.0.0"
+  port: 8000
+
+parameters:
+  limitLogin: 10
+  limitPassword: 100
+  limitIp: 1000
+
+listIPs:
+  pathFile: "./lists/list.json"
